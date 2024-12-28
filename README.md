@@ -77,7 +77,7 @@ This repository provides simulation and teleoperation tools for controlling a ro
   To start the Rviz simulation:
   
   ```
-  roslaunch xarm_gazebo xarm7_beside_table.launch add_gripper:=trueroslaunch xarm_gazebo xarm7_beside_table.launch add_gripper:=true
+  roslaunch xarm7_gripper_moveit_config xarm7_gripper_moveit_gazebo.launch
   ```
   To start teleoperation node
   ```
