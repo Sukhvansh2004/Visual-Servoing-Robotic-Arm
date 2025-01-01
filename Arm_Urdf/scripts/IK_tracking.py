@@ -1,11 +1,21 @@
+#!/usr/bin/env python3
+
 import pinocchio as pin
 import numpy as np
+import rospy
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from quadprog import solve_qp  # Install with `pip install quadprog`
 import time
 import os
 
-# Load the robot model
-urdf_path = os.path.join("Arm_Urdf", "urdf", "Arm_Urdf.urdf")  # Replace with the path to your URDF file
+rospy.init_node('tracking_publisher')
+pub = rospy.Publisher('/body_controller/command', JointTrajectory, queue_size=10)
+
+# Get the absolute path to the directory containing this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Build the full path to the URDF file relative to the script's location
+urdf_path = os.path.join(script_dir, "../urdf/Arm_Urdf.urdf")
 model = pin.buildModelFromUrdf(urdf_path)
 visual_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.VISUAL)
 collision_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.COLLISION)
@@ -39,6 +49,19 @@ q_trajectory = []
 pose_errors = []
 viz.display(q)
 time.sleep(5)
+
+def publish_joint_angles(joint_angles):
+    trajectory_msg = JointTrajectory()
+    trajectory_msg.joint_names = ['Joint_1', 'Joint_2', 'Joint_3',
+                                  'Joint_4', 'Joint_5', 'Joint_6']
+
+    point = JointTrajectoryPoint()
+    point.positions = joint_angles
+    point.time_from_start = rospy.Duration(0.1)
+
+    trajectory_msg.points = [point]
+    pub.publish(trajectory_msg)
+
 # Loop through each desired pose in the trajectory
 for desired_pose in trajectory:
     for i in range(max_iterations):
@@ -51,7 +74,7 @@ for desired_pose in trajectory:
         current_pose = data.oMf[end_effector_frame]
 
         # Error in SE(3) as a 6D vector (translation + rotation)
-        error = pin.log6(desired_pose.inverse() * current_pose).vector
+        error = pin.log6(current_pose.inverse() * desired_pose).vector
         if np.linalg.norm(error) < tolerance:
             print(f"Converged to pose in {i+1} iterations")
             break
@@ -61,7 +84,7 @@ for desired_pose in trajectory:
 
         # Quadratic program matrices
         H = J.T @ J + damping * np.eye(model.nq)  # Regularized Hessian
-        g = -J.T @ error  # Gradient term
+        g = J.T @ error  # Gradient term
 
         # Inequality constraints for joint limits
         # Ensuring q_min <= q + Δq <= q_max
@@ -74,6 +97,7 @@ for desired_pose in trajectory:
         # Update joint configuration
         q = pin.integrate(model, q, delta_q)
         viz.display(q)
+        publish_joint_angles(q)
         time.sleep(0.2)
 
     # Store the joint configuration and error for this step

@@ -4,7 +4,11 @@ from quadprog import solve_qp  # Install with `pip install quadprog`
 import time
 import os
 # Load the robot model
-urdf_path = os.path.join("Arm_Urdf", "urdf", "Arm_Urdf.urdf") #os.path.join("model.urdf")  # Replace with the path to your URDF file
+# Get the absolute path to the directory containing this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Build the full path to the URDF file relative to the script's location
+urdf_path = os.path.join(script_dir, "../urdf/Arm_Urdf.urdf")
 model = pin.buildModelFromUrdf(urdf_path)
 visual_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.VISUAL)
 collision_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.COLLISION)
