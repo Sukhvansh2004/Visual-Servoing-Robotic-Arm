@@ -3,6 +3,9 @@
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot name="Arm_Urdf">
+    <material name="black">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+    </material>
     <link name="base_link">
         <inertial>
             <origin xyz="-0.0108454625152952 5.41174924359317E-05 0.006809784336333" rpy="0 0 0" />
@@ -61,6 +64,40 @@
         <limit lower="-3.17" upper="3.17" effort="50" velocity="5" />
         <dynamics damping="0.5" friction="0.1"/>
     </joint>
+    <joint name="camera_joint" type="fixed">
+        <axis xyz="0 1 0"/>
+        <origin rpy="0 0 -1.57" xyz="0.0 -0.02 0.02"/>
+        <parent link="Link_1"/>
+        <child link="camera_link"/>
+    </joint>
+    <link name="camera_link">
+        <inertial>
+            <mass value="1e-5"/>
+            <origin rpy="0 0 0" xyz="0.0 -0.02 0.02"/>
+            <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+        </inertial>
+        <collision>
+            <origin rpy="0 0 -1.570" xyz="0 0 0"/>
+            <geometry>
+                <box size="0.025 0.025 0.025"/>
+            </geometry>
+        </collision>
+        <visual>
+            <origin rpy="0 0 -1.570" xyz="0 0 0"/>
+            <geometry>
+                <box size="0.025 0.025 0.025"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+    </link>
+  <!-- Add camera optical frame with standard computer vision orientation -->
+  <joint name="camera_optical_joint" type="fixed">
+    <origin rpy="-1.5707963 0 -1.5707963" xyz="0.0 0.0 0.0"/>
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+  </joint>
+  <link name="camera_optical_link">
+  </link>
     <link name="Link_2">
         <inertial>
             <origin xyz="0.0039680486454326 0.217484463914853 0.0226240865668204" rpy="0 0 0" />
@@ -355,5 +392,44 @@
         <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
             <robotNamespace>/</robotNamespace>
         </plugin>
+    </gazebo>
+    <gazebo reference="camera_link">
+        <sensor type="camera" name="camera">
+        <update_rate>30.0</update_rate>
+        <camera name="head">
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image>
+            <width>800</width>
+            <height>800</height>
+            <format>R8G8B8</format>
+            </image>
+            <clip>
+            <near>0.02</near>
+            <far>300</far>
+            </clip>
+            <noise>
+            <type>gaussian</type>
+            <!-- Noise is sampled independently per pixel on each frame.
+                That pixel's noise value is added to each of its color
+                channels, which at that point lie in the range [0,1]. -->
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+            </noise>
+        </camera>
+        <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+            <alwaysOn>true</alwaysOn>
+            <updateRate>0.0</updateRate>
+            <cameraName>camera</cameraName>
+            <imageTopicName>image_raw</imageTopicName>
+            <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+            <frameName>camera_link</frameName>
+            <hackBaseline>0.07</hackBaseline>
+            <distortionK1>0.0</distortionK1>
+            <distortionK2>0.0</distortionK2>
+            <distortionK3>0.0</distortionK3>
+            <distortionT1>0.0</distortionT1>
+            <distortionT2>0.0</distortionT2>
+        </plugin>
+        </sensor>
     </gazebo>
 </robot>
